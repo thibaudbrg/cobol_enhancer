@@ -20,3 +20,8 @@ data/output/
 #poetry.lock
 #package-lock.json
 #yarn.lock
+
+# JetBrains specific
+.idea/
+*.iml
+*.iws
