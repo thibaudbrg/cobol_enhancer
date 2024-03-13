@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "my-app"
+version = "0.1.0"
+description = ""
+authors = ["Thibaud Bourgeois <thibaud.bourgeois25@.com>"]
+readme = "README.md"
+packages = [
+    { include = "app" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uvicorn = "^0.23.2"
+langserve = {extras = ["server"], version = ">=0.0.30"}
+pydantic = "<2"
+ubp-cobol = {path = "packages/ubp-cobol", develop = true}
+langgraph = "^0.0.26"
+langchain-openai = "^0.0.8"
+langchainhub = "^0.1.15"
+termcolor = "^2.4.0"
+
+
+[tool.poetry.group.dev.dependencies]
+langchain-cli = ">=0.0.15"
+pytest = "^8.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

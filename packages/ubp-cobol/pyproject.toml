@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "ubp-cobol"
+version = "0.0.1"
+description = "Converting Cobol to a better one"
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8.1,<4.0"
+openai = "<2"
+langchain-community = "^0.0.24"
+langchain-core = "^0.1.4"
+
+[tool.poetry.group.dev.dependencies]
+langchain-cli = ">=0.0.21"
+fastapi = "^0.104.0"
+sse-starlette = "^1.6.5"
+
+[tool.langserve]
+export_module = "ubp_cobol.chain"
+export_attr = "chain"
+
+[tool.templates-hub]
+use-case = "chatbot"
+author = "LangChain"
+integrations = ["OpenAI"]
+tags = ["getting-started"]
+
+[build-system]
+requires = [
+    "poetry-core",
+]
+build-backend = "poetry.core.masonry.api"
