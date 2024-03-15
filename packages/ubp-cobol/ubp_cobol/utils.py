@@ -13,11 +13,21 @@ def print_info(info: str):
 def print_error(error: str):
     print(colored(f"{error}", 'red'))
 
-def sanitize_output(text: str):
-    possible_delimiters = ["```cobol", "```plaintext"]
-    for delimiter in possible_delimiters:
-        if delimiter in text:
-            _, after = text.split(delimiter)
-            code = after.split("```")[0]
-            return code.strip()
+def sanitize_output(text: str, rm_opening: bool = True, rm_closing: bool = True):
+    # Define the possible opening and closing delimiters
+    opening_delimiters = ["```cobol", "```plaintext"]
+    closing_delimiter = "```"
+
+    # Check for opening delimiters and remove them if required
+    for opening in opening_delimiters:
+        if text.startswith(opening):
+            if rm_opening:
+                text = text[len(opening):]
+            break
+
+    # Check for closing delimiter and remove it if required
+    if rm_closing and closing_delimiter in text:
+        closing_index = text.rfind(closing_delimiter)
+        text = text[:closing_index]
+
     return text.strip()

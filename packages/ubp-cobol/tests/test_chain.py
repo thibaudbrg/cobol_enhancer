@@ -2,6 +2,8 @@ import pytest
 import os
 from tempfile import TemporaryDirectory
 from ubp_cobol.chain import process_directory, GraphState, app
+from IPython.display import Image
+
 
 #@pytest.fixture
 #def cobol_project_directory():
@@ -58,3 +60,9 @@ def test_workflow():
         for key, value in output.items():
 
             print("\n---\n")
+
+
+def test_print_workflow():
+    image_data = app.get_graph().draw_png()
+    with open('data/graph_image.png', 'wb') as img_file:
+        img_file.write(image_data)

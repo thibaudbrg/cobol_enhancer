@@ -18,6 +18,8 @@ langgraph = "^0.0.26"
 langchain-openai = "^0.0.8"
 langchainhub = "^0.1.15"
 termcolor = "^2.4.0"
+ipython = "^8.22.2"
+pygraphviz = "^1.12"
 
 
 [tool.poetry.group.dev.dependencies]

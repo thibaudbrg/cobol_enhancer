@@ -11,13 +11,10 @@ from langchain import hub
 from .common import MODEL_NAME, GraphState
 from .utils import print_heading, print_info, print_error, print_subheading, sanitize_output
 
+
 def critic_gen(state: GraphState):
     print_heading("CRITIC GENERATION")
-    current_file = state["files_to_process"][0]
-    with open(current_file, 'r') as file:
-        old_code = file.read()
-    new_code = state["new_code"]
-    
+
     # Ensure 'critic' exists in state and is not None, and it has at least one element
     if state.get("critic") and len(state["critic"]) > 0 and hasattr(state["critic"][0], 'description'):
         previous_critic = state["critic"][0].description
@@ -36,31 +33,32 @@ def critic_gen(state: GraphState):
     review_tool_oai = convert_to_openai_tool(CodeReviewResult)
     llm_with_tool = model.bind(
         tools=[review_tool_oai],
-        tool_choice={"type": "function", "function": {"name": "CodeReviewResult", "args": {"description": "description", "grade": "grade"}}},
+        tool_choice={"type": "function", "function": {"name": "CodeReviewResult",
+                                                      "args": {"description": "description", "grade": "grade"}}},
     )
     parser_tool = PydanticToolsParser(tools=[CodeReviewResult])
 
     chain = prompt | llm_with_tool | parser_tool
 
-    result = chain.invoke({"old_code": old_code,
+    critic = chain.invoke({"old_code": state["old_code"],
                            "specific_demands": state["specific_demands"],
                            "previous_critic": previous_critic,
                            "previous_last_gen_code": previous_last_gen_code,
-                           "new_code": new_code})
+                           "new_code": state["new_code"]})
 
-    updated_state = state.copy()
-    updated_state["critic"] = result
+    state["critic"] = critic
 
-    print_info(f"description: {updated_state['critic'][0].description}")
-    print_info(f"grade: {updated_state['critic'][0].grade}")
-    return updated_state
+    print_info(f"description: {state['critic'][0].description}")
+    print_info(f"grade: {state['critic'][0].grade}")
+    return state
+
 
 def eval_decider(state: GraphState):
     print_heading("EVALUATION DECIDER")
     grade = state["critic"][0].grade
 
     if grade == "good":
-        human_input = human_review(state)  # Incorporate human review with enhanced UI
+        human_review(state)  # Incorporate human review with enhanced UI
 
         if "specific_demands" in state and state["specific_demands"]:
             print_info(f"Regenerating based on specific demands: {state['specific_demands']}")
@@ -81,9 +79,13 @@ def eval_decider(state: GraphState):
             print_info(f"Saved justification to: {justification_file_path}")
 
             # Clear state for the next iteration or conclusion
+            state["old_code"] = ""
             state["previous_last_gen_code"] = ""
             state["new_code"] = ""
-            state["critic"] = []
+            state["specific_demands"] = ""
+            state["metadata"] = ""
+            state["filename"] = ""
+            state["critic"] = {}
 
             if not state["files_to_process"]:
                 print_info("All files have been processed.")
@@ -93,11 +95,13 @@ def eval_decider(state: GraphState):
     else:
         print_error("Critic has identified issues. Initiating regeneration...")
         return "re_gen"
-    
+
+
 def print_diff_line(line, width, prefix_length=2):
     # Adjust the line width for the prefix
     line_content = line[prefix_length:].rstrip()
     return f"{line_content:<{width - prefix_length}}"
+
 
 def human_review(state: GraphState) -> GraphState:
     print_heading("HUMAN REVIEW")
@@ -106,12 +110,8 @@ def human_review(state: GraphState) -> GraphState:
     terminal_width = shutil.get_terminal_size().columns
     half_terminal_width = terminal_width // 2
 
-    current_file = state["files_to_process"][0]
-    with open(current_file, 'r') as file:
-        old_code = file.read()
-
     # Split the code into lines for diffing
-    old_code_lines = old_code.split('\n')
+    old_code_lines = state["old_code"].split('\n')
     new_code_lines = state["new_code"].split('\n')
 
     # Use difflib to get the diff
@@ -146,43 +146,54 @@ def human_review(state: GraphState) -> GraphState:
 
     print("=" * terminal_width)
 
-    while True:
+    decision_made = False
+    specific_demands_provided = False
+
+    while not decision_made:
         human_decision = input("Accept changes? (yes/no): ").strip().lower()
         if human_decision == "yes":
             print_info("Changes accepted. Moving to the next file.")
             state["specific_demands"] = ""
-            break
-        elif human_decision == "no":
+            decision_made = True
+        elif human_decision == "no" and not specific_demands_provided:
             print_error("Changes not accepted. Please provide specific demands for regeneration:")
             specific_demands = input("Enter demands: ").strip()
             state["specific_demands"] = specific_demands
-            break
+            specific_demands_provided = True
+
+            # Ask if they want to reconsider their decision
+            reconsider = input("Would you like to reconsider accepting the changes? (yes/no): ").strip().lower()
+            if reconsider == "yes":
+                decision_made = True  # They've reconsidered; exit loop
+            elif reconsider == "no":
+                print_info("Understood. Keeping the original decision to reject the changes.")
+                decision_made = True  # Confirming their decision to reject; exit loop
+            else:
+                print_error("Error: Please enter 'yes' or 'no'.")
         else:
             print_error("Error: Please enter 'yes' or 'no'.")
 
     return state
 
+
 def new_gen(state: GraphState) -> GraphState:
     print_heading("NEW GENERATION BASED ON FEEDBACK")
+
     prompt = hub.pull("thibaudbrg/cobol-new-gen")
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
-
     chain = prompt | model | StrOutputParser()
 
-    with open(state["files_to_process"][0], 'r') as file:
-        old_code = file.read()
-    
     result = chain.invoke({
         "metadata": state["file_metadata"],
-        "filename": os.path.basename(state["files_to_process"][0]),
+        "filename": state["filename"],
         "critic": state["critic"][0].description,
         "specific_demands": state["specific_demands"],
-        "old_code": old_code,
+        "old_code": state["old_code"],
         "new_code": state["new_code"]
     })
+
+    state["specific_demands"] = ""
+    state["previous_last_gen_code"] = state["new_code"]
+    state["new_code"] = sanitize_output(result)
+    return state
     
-    updated_state = state.copy()
-    updated_state["specific_demands"] = ""
-    updated_state["previous_last_gen_code"] = state["new_code"]
-    updated_state["new_code"] = sanitize_output(result)
-    return updated_state

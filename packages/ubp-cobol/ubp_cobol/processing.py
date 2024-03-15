@@ -1,5 +1,4 @@
 import os
-from typing import List, TypedDict
 
 from .common import GraphState, MODEL_NAME
 from .utils import print_heading, print_info, sanitize_output
@@ -21,12 +20,12 @@ def process_directory(state: GraphState) -> GraphState:
                 files_to_process.append(file_path)
                 file_metadata[file_path] = {"dependencies": [], "other_info": {}}
 
-    updated_state = state.copy()
-    updated_state["files_to_process"] = files_to_process
-    updated_state["file_metadata"] = file_metadata
+    state["files_to_process"] = files_to_process
+    state["file_metadata"] = file_metadata
 
     print_info(f"Files to process: {files_to_process}")
-    return updated_state
+    return state
+
 
 def process_file(state: GraphState) -> GraphState:
     print_heading("PROCESSING FILE")
@@ -35,18 +34,48 @@ def process_file(state: GraphState) -> GraphState:
         return state
 
     current_file = state["files_to_process"][0]
-    metadata = state["file_metadata"][current_file]
-
     with open(current_file, 'r') as file:
-        file_content = file.read()
+        old_code = file.read()
+
+    state["metadata"] = state["file_metadata"][current_file]
+    state["filename"] = os.path.basename(current_file)
+    state["old_code"] = old_code
 
     prompt = hub.pull("thibaudbrg/cobol-code-gen")
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
+    chain = prompt | model | StrOutputParser()
+    result = chain.invoke({"metadata": state["metadata"], "filename": state["filename"], "old_code": state["old_code"]})
+
+
+    state["new_code"] = result
+    print_info(f"Processed file: {current_file}")
+
+    return state
+
+
+def finished(state: GraphState) -> str:
+    print_heading("FINISHED DECIDER")
+    result = state["new_code"]
+    code_block_delimiter = "```"
+    if not result.strip().endswith(code_block_delimiter):
+        return "not_finished"
+    else:
+        state["new_code"] = sanitize_output(result)
+        return "finished"
+
+
+def extender(state: GraphState) -> GraphState:
+    print_heading("EXTENDER")
+
+    prompt = hub.pull("thibaudbrg/cobol-code-extender")
+    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
 
     chain = prompt | model | StrOutputParser()
-    result = chain.invoke({"metadata": metadata, "filename": os.path.basename(current_file), "file": file_content})
+    result = chain.invoke({"metadata": state["metadata"],
+                           "filename": state["filename"],
+                           "old_code": state["old_code"],
+                           "not_finished_file": state["new_code"],
+                           })
 
-    updated_state = state.copy()
-    updated_state["new_code"] = sanitize_output(result)
-    print_info(f"Processed file: {current_file}")
-    return updated_state
+    state["new_code"] = state["new_code"] + "\n" + sanitize_output(result, True, False)
+    return state
