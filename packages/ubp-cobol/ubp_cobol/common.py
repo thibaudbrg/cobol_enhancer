@@ -15,5 +15,5 @@ class GraphState(TypedDict):
     specific_demands: str
     copybooks: Dict[str, str]
 
-MODEL_NAME = "gpt-4-turbo-preview"
-#MODEL_NAME = "gpt-3.5-turbo"
+#MODEL_NAME = "gpt-4-turbo-preview"
+MODEL_NAME = "gpt-3.5-turbo"
