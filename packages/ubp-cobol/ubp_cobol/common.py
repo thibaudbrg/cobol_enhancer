@@ -13,6 +13,7 @@ class GraphState(TypedDict):
     previous_last_gen_code: str
     new_code: str
     specific_demands: str
+    copybooks: Dict[str, str]
 
 MODEL_NAME = "gpt-4-turbo-preview"
 #MODEL_NAME = "gpt-3.5-turbo"

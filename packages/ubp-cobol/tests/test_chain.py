@@ -3,10 +3,11 @@ import os
 from tempfile import TemporaryDirectory
 from ubp_cobol.chain import process_directory, GraphState, app
 from IPython.display import Image
+from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display
 
 
-#@pytest.fixture
-#def cobol_project_directory():
+# @pytest.fixture
+# def cobol_project_directory():
 #    """
 #    Creates a temporary directory with a simulated COBOL project structure, including .cob, .pco files, and a copy directory.
 #    """
@@ -31,7 +32,7 @@ from IPython.display import Image
 #
 #        yield tmpdirname
 #
-#def test_process_directory(cobol_project_directory):
+# def test_process_directory(cobol_project_directory):
 #    """
 #    Test the process_directory function to ensure it correctly identifies .cob and .pco files and populates the state.
 #    """
@@ -58,7 +59,6 @@ def test_workflow():
     # Run the application with the initialized inputs
     for output in app.stream(inputs):
         for key, value in output.items():
-
             print("\n---\n")
 
 
@@ -66,3 +66,16 @@ def test_print_workflow():
     image_data = app.get_graph().draw_png()
     with open('data/graph_image.png', 'wb') as img_file:
         img_file.write(image_data)
+
+
+def test_copy_parser():
+    """
+    Test the extract_copybooks function to ensure it correctly identifies copybook names in a COBOL file.
+    """
+    cobol_file_path = "data/input/DWGEX699.cob"
+    with open(cobol_file_path, 'r') as file:
+        code = file.read()
+
+    copybooks = extract_copybooks(code)
+
+    print(format_copybooks_for_display(copybooks))

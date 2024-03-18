@@ -1,15 +1,18 @@
-from pydantic import BaseModel, Field
-from termcolor import colored
-import shutil, difflib, os
+import difflib
+import os
+import shutil
 
-from langchain_openai import ChatOpenAI
+from langchain import hub
 from langchain.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.utils.function_calling import convert_to_openai_tool
-from langchain import hub
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
+from termcolor import colored
 
 from .common import MODEL_NAME, GraphState
-from .utils import print_heading, print_info, print_error, print_subheading, sanitize_output
+from .utils import print_heading, print_info, print_error, print_subheading, sanitize_output, \
+    format_copybooks_for_display
 
 
 def critic_gen(state: GraphState):
@@ -86,6 +89,7 @@ def eval_decider(state: GraphState):
             state["metadata"] = ""
             state["filename"] = ""
             state["critic"] = {}
+            state["copybooks"] = {}
 
             if not state["files_to_process"]:
                 print_info("All files have been processed.")
@@ -189,11 +193,12 @@ def new_gen(state: GraphState) -> GraphState:
         "critic": state["critic"][0].description,
         "specific_demands": state["specific_demands"],
         "old_code": state["old_code"],
-        "new_code": state["new_code"]
+        "new_code": state["new_code"],
+        "copybooks": format_copybooks_for_display(state["copybooks"])
     })
+
 
     state["specific_demands"] = ""
     state["previous_last_gen_code"] = state["new_code"]
     state["new_code"] = sanitize_output(result)
     return state
-    

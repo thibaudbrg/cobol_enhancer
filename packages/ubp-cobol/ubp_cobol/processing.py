@@ -1,7 +1,8 @@
 import os
+import json
 
 from .common import GraphState, MODEL_NAME
-from .utils import print_heading, print_info, sanitize_output
+from .utils import print_heading, print_info, sanitize_output, extract_copybooks, format_copybooks_for_display
 
 from langchain import hub
 from langchain_openai import ChatOpenAI
@@ -40,12 +41,16 @@ def process_file(state: GraphState) -> GraphState:
     state["metadata"] = state["file_metadata"][current_file]
     state["filename"] = os.path.basename(current_file)
     state["old_code"] = old_code
+    state["copybooks"] = extract_copybooks(old_code)
 
     prompt = hub.pull("thibaudbrg/cobol-code-gen")
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
     chain = prompt | model | StrOutputParser()
-    result = chain.invoke({"metadata": state["metadata"], "filename": state["filename"], "old_code": state["old_code"]})
-
+    result = chain.invoke(
+        {"metadata": state["metadata"],
+         "filename": state["filename"],
+         "old_code": state["old_code"],
+         "copybooks": format_copybooks_for_display(state["copybooks"])})
 
     state["new_code"] = result
     print_info(f"Processed file: {current_file}")
