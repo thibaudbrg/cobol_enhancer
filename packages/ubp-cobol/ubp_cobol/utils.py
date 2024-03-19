@@ -1,5 +1,9 @@
+import difflib
+import shutil
+
 from termcolor import colored
-import re, os
+import re
+import os
 
 
 # Utility functions for UI
@@ -17,6 +21,54 @@ def print_info(info: str):
 
 def print_error(error: str):
     print(colored(f"{error}", 'red'))
+
+
+def print_diff_line(line, width, prefix_length=2):
+    # Adjust the line width for the prefix
+    line_content = line[prefix_length:].rstrip()
+    return f"{line_content:<{width - prefix_length}}"
+
+
+def print_code_comparator(old_code: str, new_code: str) -> str:
+    # Get terminal width and calculate half for side-by-side view
+    terminal_width = shutil.get_terminal_size().columns
+    half_terminal_width = terminal_width // 2
+
+    # Split the code into lines for diffing
+    old_code_lines = old_code.split('\n')
+    new_code_lines = new_code.split('\n')
+
+    # Use difflib to get the diff
+    diff = list(difflib.ndiff(old_code_lines, new_code_lines))
+
+    print_subheading("Side-by-side comparison (Old vs. New):")
+    print("=" * terminal_width)
+
+    # Process the diff output
+    for line in diff:
+        if line.startswith("- "):
+            print(colored(print_diff_line(line, half_terminal_width), 'red'), end="")
+        elif line.startswith("+ "):
+            print(colored(print_diff_line(line, half_terminal_width), 'green'), end="")
+        elif line.startswith("? "):
+            # Skip the detail lines from difflib output
+            continue
+        else:
+            print(print_diff_line(line, half_terminal_width), end="")
+
+        print(' |', end="")  # Separator for the columns
+
+        if line.startswith("- "):
+            # For removed lines, we'll leave the new code column empty
+            print(" " * (half_terminal_width - 1))
+        elif line.startswith("+ "):
+            # For added lines, we'll print again on the right
+            print(colored(print_diff_line(line, half_terminal_width), 'green'))
+        else:
+            # For unchanged lines, print the line again in the new code column
+            print(print_diff_line(line, half_terminal_width))
+
+    print("=" * terminal_width)
 
 
 def sanitize_output(text: str, rm_opening: bool = True, rm_closing: bool = True):

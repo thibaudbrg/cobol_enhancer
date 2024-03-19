@@ -3,6 +3,7 @@ import sys
 
 from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from .common import GraphState, MODEL_NAME
@@ -72,7 +73,7 @@ def process_directory(state: GraphState) -> GraphState:
     return state
 
 
-def process_file(state: GraphState) -> GraphState:
+def process_file(state: GraphState, template: str = None) -> GraphState:
     print_heading("PROCESSING FILE")
     if not state["files_to_process"]:
         print_info("No more files to process.")
@@ -87,7 +88,10 @@ def process_file(state: GraphState) -> GraphState:
     state["old_code"] = old_code
     state["copybooks"] = extract_copybooks(old_code)
 
-    prompt = hub.pull("thibaudbrg/cobol-code-gen")
+    if template:
+        prompt = ChatPromptTemplate.from_template(template)
+    else:
+        prompt = hub.pull("thibaudbrg/cobol-code-gen")
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
     chain = prompt | model | StrOutputParser()
     result = chain.invoke(
@@ -113,10 +117,13 @@ def finished(state: GraphState) -> str:
         return "finished"
 
 
-def extender(state: GraphState) -> GraphState:
+def extender(state: GraphState, template: str = None) -> GraphState:
     print_heading("EXTENDER")
 
-    prompt = hub.pull("thibaudbrg/cobol-code-extender")
+    if template:
+        prompt = ChatPromptTemplate.from_template(template)
+    else:
+        prompt = hub.pull("thibaudbrg/cobol-code-extender")
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
 
     chain = prompt | model | StrOutputParser()
