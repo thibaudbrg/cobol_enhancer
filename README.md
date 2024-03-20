@@ -72,7 +72,7 @@ The `cobol_enhancer` application is designed to iteratively improve a directory 
 Below is a visual representation of the workflow within `cobol_enhancer`:
 
 <p align="center">
-  <img src="data/graph_image.png" alt="COBOL Enhancer Workflow" style="border-radius: 10px; width: 500px; height: auto;">
+  <img src="data/graph_image_own.png" alt="COBOL Enhancer Workflow" style="border-radius: 10px; width: 500px; height: auto;">
 </p>
 
 ## License
