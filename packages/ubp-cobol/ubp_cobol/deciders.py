@@ -28,7 +28,7 @@ def evaluate_quality_decider(state: GraphState):
     grade = state["critic"]["grade"]
 
     if grade == "good":
-        return "human_review"
+        return "human_check"
     else:
         print_error("Critic has identified issues. Initiating regeneration...")
         return "re_gen"
