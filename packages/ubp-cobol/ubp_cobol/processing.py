@@ -1,5 +1,4 @@
 import os
-import sys
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,6 +8,13 @@ from .common import GraphState, MODEL_NAME, WorkflowExit
 from .prompts import process_file_next_prompt, extender_prompt
 from .utils import print_heading, print_info, print_error, sanitize_output, extract_copybooks, \
     format_copybooks_for_display, filename_tab_completion
+
+# Hacky trick to resolve an issue with pyreadline on Windows
+# Manually patch the Callable in collections if it's not present
+import collections.abc
+
+if not hasattr(collections, 'Callable'):
+    collections.Callable = collections.abc.Callable
 
 try:
     # Attempt to import readline for Unix/Linux systems

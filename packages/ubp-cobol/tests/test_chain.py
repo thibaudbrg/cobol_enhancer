@@ -1,3 +1,5 @@
+import os
+
 from ubp_cobol.common import WorkflowExit
 from ubp_cobol.graph_export_utils import merge_deciders_for_printing, export_graph_to_image
 from ubp_cobol.workflow import app
@@ -23,6 +25,8 @@ def test_workflow():
 def test_print_workflow():
 
     graph = merge_deciders_for_printing(app.get_graph())
+    # Ensure the data directory exists
+
     #1st plot
     image_data = graph.draw_png()
     with open('data/graph_image.png', 'wb') as img_file:
