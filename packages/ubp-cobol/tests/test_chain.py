@@ -3,7 +3,8 @@ import os
 from tempfile import TemporaryDirectory
 
 from ubp_cobol.common import WorkflowExit
-from ubp_cobol.workflow import process_directory, GraphState, app
+from ubp_cobol.workflow import process_directory, GraphState, app, merge_deciders_for_printing, export_graph_to_image, \
+    convert_graph_to_plotly_figure
 from IPython.display import Image
 from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display
 
@@ -25,10 +26,13 @@ def test_workflow():
 
 
 def test_print_workflow():
-    image_data = app.get_graph().draw_png()
+    image_data = merge_deciders_for_printing(app.get_graph()).draw_png()
     with open('data/graph_image.png', 'wb') as img_file:
         img_file.write(image_data)
 
+    export_graph_to_image(merge_deciders_for_printing(app.get_graph()), "data/graph")
+    fig = convert_graph_to_plotly_figure(merge_deciders_for_printing(app.get_graph()))
+    fig.show()
 
 def test_copy_parser():
     """
