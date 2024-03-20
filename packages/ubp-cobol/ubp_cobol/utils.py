@@ -5,6 +5,8 @@ from termcolor import colored
 import re
 import os
 
+from ubp_cobol.common import GraphState
+
 
 # Utility functions for UI
 def print_heading(heading: str):
@@ -126,3 +128,18 @@ def format_copybooks_for_display(copybooks: dict) -> str:
         formatted_copybooks.append(f"Copybook: {name}, Content: \n{content}\n")
     # Join all formatted copybooks into a single string
     return "\n".join(formatted_copybooks)
+
+
+def get_previous_critic_description(state: GraphState) -> str:
+    # Ensure 'critic' exists in state, is a dictionary, and has a 'description' key
+    if "critic" in state and isinstance(state["critic"], dict) and "description" in state["critic"]:
+        return state["critic"]["description"]
+    else:
+        return ""
+
+
+def filename_tab_completion(text, state):
+    # List all file names in data/input/, filtering by the current input text
+    files = [f for f in os.listdir("data/input/") if f.startswith(text)]
+    # Return the state-th file name if it exists, appending a space for convenience
+    return (files[state] + " ") if state < len(files) else None

@@ -1,14 +1,14 @@
 import os
 import sys
 
-from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from .common import GraphState, MODEL_NAME
+from .common import GraphState, MODEL_NAME, WorkflowExit
+from .prompts import process_file_next_prompt, extender_prompt
 from .utils import print_heading, print_info, print_error, sanitize_output, extract_copybooks, \
-    format_copybooks_for_display
+    format_copybooks_for_display, filename_tab_completion
 
 try:
     # Attempt to import readline for Unix/Linux systems
@@ -19,61 +19,67 @@ except ImportError:
         import pyreadline as readline
     except ImportError:
         print("pyreadline is required on Windows. Please install with 'pip install pyreadline'.")
-        sys.exit(1)
-
-
-def complete(text, state):
-    # List all file names in data/input/, filtering by the current input text
-    files = [f for f in os.listdir("data/input/") if f.startswith(text)]
-    # Return the state-th file name if it exists, appending a space for convenience
-    return (files[state] + " ") if state < len(files) else None
+        raise WorkflowExit
 
 
 def process_directory(state: GraphState) -> GraphState:
     print_heading("PROCESSING DIRECTORY")
 
     # Set up tab completion for file names
-    readline.set_completer(complete)
+    readline.set_completer(filename_tab_completion)
     readline.parse_and_bind("tab: complete")
 
-    # Ask the user how they want to proceed: all files or a specific list
-    choice = input("Process all COBOL files in the directory (a) or a specific list (s)? [a/s]: ").strip().lower()
     files_to_process = []
     file_metadata = {}
 
-    if choice == 'a':
-        for root, dirs, files in os.walk("data/input/"):
-            for file in files:
+    while True:
+
+        # Ask the user how they want to proceed: all files or a specific list
+        choice = input(
+            "Process all COBOL files in the directory (a), a specific list (s), or exit (e)? [a/s/e]: ").strip().lower()
+
+        if choice == 'a':
+            for root, dirs, files in os.walk("data/input/"):
+                for file in files:
+                    if file.endswith(".cob"):
+                        file_path = os.path.join(root, file)
+                        files_to_process.append(file_path)
+                        file_metadata[file_path] = {"dependencies": [], "other_info": {}}
+            break
+        elif choice == 's':
+            print("Enter the filenames to process, separated by commas (Tab for autocompletion): ")
+            specified_files = input().strip().split(',')
+            for file in specified_files:
+                file = file.strip()  # Remove any leading/trailing whitespace
                 if file.endswith(".cob"):
-                    file_path = os.path.join(root, file)
-                    files_to_process.append(file_path)
-                    file_metadata[file_path] = {"dependencies": [], "other_info": {}}
-    elif choice == 's':
-        print("Enter the filenames to process, separated by commas (Tab for autocompletion): ")
-        specified_files = input().strip().split(',')
-        for file in specified_files:
-            file = file.strip()  # Remove any leading/trailing whitespace
-            if file.endswith(".cob"):
-                file_path = os.path.join("data/input/", file)  # Assuming files are in 'data/input/'
-                if os.path.exists(file_path):
-                    files_to_process.append(file_path)
-                    file_metadata[file_path] = {"dependencies": [], "other_info": {}}
+                    file_path = os.path.join("data/input/", file)  # Assuming files are in 'data/input/'
+                    if os.path.exists(file_path):
+                        files_to_process.append(file_path)
+                        file_metadata[file_path] = {"dependencies": [], "other_info": {}}
+                    else:
+                        print_info(f"File not found: {file_path}")
                 else:
-                    print_info(f"File not found: {file_path}")
-            else:
-                print_info(f"Ignored non-COBOL file: {file}")
-    else:
-        print_error("Invalid choice. Exiting.")
-        sys.exit(1)
+                    print_info(f"Ignored non-COBOL file: {file}")
+            break
+        elif choice == 'e':  # Allow the user to exit the program
+            print_info("Exiting program as requested.")
+            raise WorkflowExit
+        else:
+            print_error(
+                "Invalid choice. Please enter 'a' to process all files, 's' for a specific list, or 'e' to exit.")
 
     state["files_to_process"] = files_to_process
     state["file_metadata"] = file_metadata
+
+    if not files_to_process:
+        print_info("No COBOL files to process. Exiting the program.")
+        raise WorkflowExit  # Exit if no files are to be processed
 
     print_info(f"Files to process: {files_to_process}")
     return state
 
 
-def process_file(state: GraphState, template: str = None) -> GraphState:
+def process_next_file(state: GraphState) -> GraphState:
     print_heading("PROCESSING FILE")
     if not state["files_to_process"]:
         print_info("No more files to process.")
@@ -88,12 +94,9 @@ def process_file(state: GraphState, template: str = None) -> GraphState:
     state["old_code"] = old_code
     state["copybooks"] = extract_copybooks(old_code)
 
-    if template:
-        prompt = ChatPromptTemplate.from_template(template)
-    else:
-        prompt = hub.pull("thibaudbrg/cobol-code-gen")
+    template = process_file_next_prompt()
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
-    chain = prompt | model | StrOutputParser()
+    chain = ChatPromptTemplate.from_template(template) | model | StrOutputParser()
     result = chain.invoke(
         {"metadata": state["metadata"],
          "filename": state["filename"],
@@ -106,32 +109,24 @@ def process_file(state: GraphState, template: str = None) -> GraphState:
     return state
 
 
-def finished(state: GraphState) -> str:
-    print_heading("FINISHED DECIDER")
-    result = state["new_code"]
-    code_block_delimiter = "```"
-    if not result.strip().endswith(code_block_delimiter):
-        return "not_finished"
-    else:
-        state["new_code"] = sanitize_output(result)
-        return "finished"
-
-
-def extender(state: GraphState, template: str = None) -> GraphState:
+def extender(state: GraphState) -> GraphState:
     print_heading("EXTENDER")
 
-    if template:
-        prompt = ChatPromptTemplate.from_template(template)
-    else:
-        prompt = hub.pull("thibaudbrg/cobol-code-extender")
+    template = extender_prompt(state)
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
 
-    chain = prompt | model | StrOutputParser()
-    result = chain.invoke({"metadata": state["metadata"],
-                           "filename": state["filename"],
-                           "old_code": state["old_code"],
-                           "not_finished_file": state["new_code"],
-                           })
+    chain = ChatPromptTemplate.from_template(template) | model | StrOutputParser()
+    result = chain.invoke({
+        "filename": state["filename"],
+        "critic": state.get("critic", {}).get("description", ""),
+        "specific_demands": state.get("specific_demands", ""),
+        "metadata": state["metadata"],
+        "copybooks": format_copybooks_for_display(state["copybooks"]),
+        "old_code": state["old_code"],
+        "new_code": state["new_code"],
+        "atlas_answer": state.get("atlas_answer", ""),
+        "atlas_message_type": (state.get("atlas_message_type") or "").replace('_', ' ').capitalize()
+    })
 
     state["new_code"] = state["new_code"] + "\n" + sanitize_output(result, True, False)
     return state

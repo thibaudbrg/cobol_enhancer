@@ -32,8 +32,7 @@ def receiver(state: GraphState) -> GraphState:
     return state
 
 
-
-def determine_message_type(state: GraphState) -> str:
+def message_type_decider(state: GraphState) -> str:
     print_heading("DETERMINE MESSAGE TYPE")
 
     # Prepare the prompt and the model for calling OpenAI
@@ -46,14 +45,6 @@ def determine_message_type(state: GraphState) -> str:
     class MessageTypeResult(BaseModel):
         message_type: str = Field(
             description="The type of the message: 'compilation_error', 'execution_error', or 'logs'.")
-
-    # message_type_tool_oai = convert_to_openai_tool(MessageTypeResult)
-    # llm_with_tool = model.bind(
-    #     tools=[message_type_tool_oai],
-    #     tool_choice={"type": "function", "function": {"name": "MessageTypeResult",
-    #                                                   "args": {"message_type": "message_type"}}},
-    # )
-    # parser_tool = PydanticToolsParser(tools=[MessageTypeResult])
 
     chain = prompt | model.with_structured_output(MessageTypeResult)
 
@@ -84,9 +75,6 @@ def handle_logs(state: GraphState) -> GraphState:
     print_heading("LOGS HANDLER")
     print_info(state["atlas_answer"])
 
-
-
-
     current_file = state["files_to_process"].pop(0)
     output_file_path = current_file.replace("data/input/", "data/output/")
     justification_file_path = output_file_path.replace('.cob', '_justification.md')
@@ -110,6 +98,7 @@ def handle_logs(state: GraphState) -> GraphState:
     state["old_code"] = ""
     state["previous_last_gen_code"] = ""
     state["new_code"] = ""
+    state["human_decision"] = ""
     state["specific_demands"] = ""
     state["metadata"] = ""
     state["filename"] = ""
@@ -118,8 +107,4 @@ def handle_logs(state: GraphState) -> GraphState:
     state["atlas_answer"] = ""
     state["atlas_message_type"] = ""
 
-
-
-
-    print_heading("END")
     return state

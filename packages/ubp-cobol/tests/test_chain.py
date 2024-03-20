@@ -1,9 +1,12 @@
 import pytest
 import os
 from tempfile import TemporaryDirectory
-from ubp_cobol.chain import process_directory, GraphState, app
+
+from ubp_cobol.common import WorkflowExit
+from ubp_cobol.workflow import process_directory, GraphState, app
 from IPython.display import Image
 from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display
+
 
 def test_workflow():
     """
@@ -13,9 +16,12 @@ def test_workflow():
     inputs = {}
 
     # Run the application with the initialized inputs
-    for output in app.stream(inputs):
-        for key, value in output.items():
-            print("\n---\n")
+    try:
+        for output in app.stream(inputs):
+            for key, value in output.items():
+                print("\n---\n")
+    except WorkflowExit:
+        print("Workflow exited early as expected.")
 
 
 def test_print_workflow():

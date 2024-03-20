@@ -1,9 +1,9 @@
 import pytest
 
 from ubp_cobol.common import GraphState
-from ubp_cobol.generation import critic_gen, new_gen
-from ubp_cobol.processing import process_file, extender
-from ubp_cobol.response_handlers import determine_message_type
+from ubp_cobol.generation import critic_generation, new_generation
+from ubp_cobol.processing import process_next_file, extender
+from ubp_cobol.response_handlers import message_type_decider
 from ubp_cobol.utils import print_code_comparator, sanitize_output
 
 from pydantic import BaseModel, Field
@@ -81,7 +81,7 @@ And here is the COBOL file named {filename}:
 {old_code}
 """
 
-    updated_state = process_file(state_process_file, template=test_prompt)
+    updated_state = process_next_file(state_process_file, template=test_prompt)
 
     # Verify that the new code is set as expected
     assert "new_code" in updated_state
@@ -366,7 +366,7 @@ Newly Generated COBOL Code:
 
 """
 
-    updated_state = critic_gen(state_critic_gen, template=test_prompt)
+    updated_state = critic_generation(state_critic_gen, template=test_prompt)
 
     # assert updated_state["critic"].description is not None
     # assert updated_state["critic"].grade in ["good", "bad"]
@@ -623,7 +623,7 @@ Error(099): Incorrect number of parameters passed to 'UPDATE-RECORD' at line 298
 
 
 def test_new_gen_with_atlas_answer(state_new_gen_with_atlas_answer):
-    updated_state = new_gen(state_new_gen_with_atlas_answer)
+    updated_state = new_generation(state_new_gen_with_atlas_answer)
 
     # Verify that the new code is as expected
     assert "new_code" in updated_state
@@ -875,7 +875,7 @@ TOFAN8*    ALPHABET EBC IS EBCDIC.
 
 
 def test_new_gen_with_human_feedback(state_new_gen_with_human_feedback):
-    updated_state = new_gen(state_new_gen_with_human_feedback)
+    updated_state = new_generation(state_new_gen_with_human_feedback)
 
     # Verify that the new code is as expected
     assert "new_code" in updated_state
@@ -1001,6 +1001,6 @@ Warning(020): Procedure 'CALL "CANCEL"' may cause runtime exception if not prope
 
 
 def test_determine_message_type(state_determine_message_type):
-    updated_state = determine_message_type(state_determine_message_type)
+    updated_state = message_type_decider(state_determine_message_type)
     # see Langsmith
 

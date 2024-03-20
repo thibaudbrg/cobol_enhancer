@@ -1,7 +1,14 @@
 from typing import List, Dict, TypedDict
 
+
+# Define a custom exception for exiting the workflow
+class WorkflowExit(Exception):
+    pass
+
+
 class FileMetadata(TypedDict):
     dependencies: List[str]
+
 
 class GraphState(TypedDict):
     files_to_process: List[str]
@@ -16,6 +23,8 @@ class GraphState(TypedDict):
     copybooks: Dict[str, str]
     atlas_answer: str
     atlas_message_type: str
+    human_decision: str
+
 
 MODEL_NAME = "gpt-4-turbo-preview"
 # MODEL_NAME = "gpt-3.5-turbo"
