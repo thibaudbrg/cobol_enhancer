@@ -150,10 +150,13 @@ def filename_tab_completion(text, state):
 
 
 def generate_code_with_history(state, function_name, template, model, variables):
+    redis_url = os.environ.get('REDIS_URL')
+    if redis_url is None:
+        raise ValueError("The REDIS_URL environment variable is not set.")
     session_id = f"{function_name}_{state['filename']}"
 
     def redis_history(session_id):
-        return RedisChatMessageHistory(session_id, url=REDIS_URL)
+        return RedisChatMessageHistory(session_id, url=redis_url)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", template),
