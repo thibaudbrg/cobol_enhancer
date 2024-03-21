@@ -12,3 +12,6 @@
 
 # Your OpenAI API key (required)
 #export OPENAI_API_KEY=your_openai_api_key_here
+
+# Your Redis Server instance URL (required)
+#export REDIS_URL=your_redis_url_here

@@ -1,17 +1,14 @@
-import os
-
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-
-from .common import GraphState, MODEL_NAME, WorkflowExit
-from .prompts import process_file_next_prompt, extender_prompt
-from .utils import print_heading, print_info, print_error, sanitize_output, extract_copybooks, \
-    format_copybooks_for_display, filename_tab_completion
-
 # Hacky trick to resolve an issue with pyreadline on Windows
 # Manually patch the Callable in collections if it's not present
 import collections.abc
+import os
+
+from langchain_openai import ChatOpenAI
+
+from .common import GraphState, MODEL_NAME, WorkflowExit
+from .prompts import process_file_next_prompt
+from .utils import print_heading, print_info, print_error, extract_copybooks, \
+    format_copybooks_for_display, filename_tab_completion, generate_code_with_history
 
 if not hasattr(collections, 'Callable'):
     collections.Callable = collections.abc.Callable
@@ -101,38 +98,15 @@ def process_next_file(state: GraphState) -> GraphState:
     state["copybooks"] = extract_copybooks(old_code)
 
     template = process_file_next_prompt()
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
-    chain = ChatPromptTemplate.from_template(template) | model | StrOutputParser()
-    result = chain.invoke(
-        {"metadata": state["metadata"],
-         "filename": state["filename"],
-         "old_code": state["old_code"],
-         "copybooks": format_copybooks_for_display(state["copybooks"])})
+    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True, max_tokens=1000)
+    variables = {
+        "metadata": state["metadata"],
+        "filename": state["filename"],
+        "old_code": state["old_code"],
+        "copybooks": format_copybooks_for_display(state["copybooks"])}
 
-    state["new_code"] = result
+    state["new_code"] = generate_code_with_history(state, "process_next_file", template, model, variables)
+
     print_info(f"Processed file: {current_file}")
 
-    return state
-
-
-def extender(state: GraphState) -> GraphState:
-    print_heading("EXTENDER")
-
-    template = extender_prompt(state)
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
-
-    chain = ChatPromptTemplate.from_template(template) | model | StrOutputParser()
-    result = chain.invoke({
-        "filename": state["filename"],
-        "critic": state.get("critic", {}).get("description", ""),
-        "specific_demands": state.get("specific_demands", ""),
-        "metadata": state["metadata"],
-        "copybooks": format_copybooks_for_display(state["copybooks"]),
-        "old_code": state["old_code"],
-        "new_code": state["new_code"],
-        "atlas_answer": state.get("atlas_answer", ""),
-        "atlas_message_type": (state.get("atlas_message_type") or "").replace('_', ' ').capitalize()
-    })
-
-    state["new_code"] = state["new_code"] + "\n" + sanitize_output(result, True, False)
     return state

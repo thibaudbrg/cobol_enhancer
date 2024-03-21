@@ -25,6 +25,7 @@ plotly = "^5.20.0"
 flask = "^3.0.2"
 networkx = "^3.2.1"
 pyreadline = "^2.1"
+redis = "^5.0.3"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -2,17 +2,6 @@ from ubp_cobol.common import GraphState
 from ubp_cobol.utils import print_heading, print_info, print_error, sanitize_output
 
 
-def has_finished_generation_decider(state: GraphState) -> str:
-    print_heading("FINISHED DECIDER")
-    result = state["new_code"]
-    code_block_delimiter = "```"
-    if not result.strip().endswith(code_block_delimiter):
-        return "not_finished"
-    else:
-        state["new_code"] = sanitize_output(result)
-        return "finished"
-
-
 def human_review_decider(state: GraphState):
     print_heading("HANDLE HUMAN REVIEW")
     print_info(f"Human review decision: {state['human_decision']}")

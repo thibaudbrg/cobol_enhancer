@@ -24,8 +24,7 @@ def process_file_next_prompt() -> str:
     Here are the useful infos (metadatas) of the provided file:
     {metadata}
 
-    Here are the Copybooks used in the file: 
-    {copybooks}
+
 
     And here is the COBOL file named {filename}:
 

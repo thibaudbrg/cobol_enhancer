@@ -1,9 +1,13 @@
-import os
+from langchain_community.chat_message_histories import RedisChatMessageHistory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_openai import ChatOpenAI
 
-from ubp_cobol.common import WorkflowExit
+from ubp_cobol.common import WorkflowExit, MODEL_NAME
 from ubp_cobol.graph_export_utils import merge_deciders_for_printing, export_graph_to_image
+from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display, print_heading
 from ubp_cobol.workflow import app
-from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display
 
 
 def test_workflow():
@@ -46,3 +50,43 @@ def test_copy_parser():
     copybooks = extract_copybooks(code)
 
     print(format_copybooks_for_display(copybooks))
+
+
+def test_extender():
+    session_id = "foo"
+
+    def create_redis_history(session_id):
+        return RedisChatMessageHistory(session_id, url="redis://localhost:6379")
+
+    print_heading("EXTENDER")
+
+    template = """
+You are an AI and you talk to a human you answer everything that he asked but with the tone of this emotion: {emotion}.
+"""
+
+    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", template),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{question}")])
+
+    chain = prompt | model | StrOutputParser()
+    chain_with_history = RunnableWithMessageHistory(
+        chain,
+        create_redis_history,  # Use the lambda function here
+        input_messages_key="question",
+        history_messages_key="history",
+    )
+
+    config = {"configurable": {"session_id": session_id}}
+    result = chain_with_history.invoke({"question": "Tell me a joke and put emojis", "emotion": "best dude friend but slow as the big lebowski"}, config=config)
+
+    print(result)
+
+    # After invoking, create an instance of RedisChatMessageHistory to print the history
+    redis_history = create_redis_history(session_id)
+
+    # Now retrieve and print the messages
+    history_messages = redis_history.messages  # Adjusted based on actual implementation
+    print("History:", history_messages)

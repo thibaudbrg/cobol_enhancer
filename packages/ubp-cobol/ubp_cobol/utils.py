@@ -1,6 +1,10 @@
 import difflib
 import shutil
 
+from langchain_community.chat_message_histories import RedisChatMessageHistory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from termcolor import colored
 import re
 import os
@@ -143,3 +147,51 @@ def filename_tab_completion(text, state):
     files = [f for f in os.listdir("data/input/") if f.startswith(text)]
     # Return the state-th file name if it exists, appending a space for convenience
     return (files[state] + " ") if state < len(files) else None
+
+
+def generate_code_with_history(state, function_name, template, model, variables):
+    session_id = f"{function_name}_{state['filename']}"
+
+    def redis_history(session_id):
+        return RedisChatMessageHistory(session_id, url=REDIS_URL)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", template),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{question}")])
+
+    chain_with_history = RunnableWithMessageHistory(
+        prompt | model | StrOutputParser(),
+        redis_history,
+        input_messages_key="question",
+        history_messages_key="history",
+    )
+
+    config = {"configurable": {"session_id": session_id}}
+
+    code_block_delimiter = "```"
+    is_first_iteration = True
+    while True:
+        # Set "question" based on whether it's the first iteration
+        question_value = "" if is_first_iteration else "continue"
+
+        result = chain_with_history.invoke({
+            "question": question_value,
+            **variables  # Unpack additional_variables into the outer dictionary
+        }, config=config)
+
+        # Append sanitized output to state["new_code"], with additional logic for first iteration
+        if is_first_iteration:
+            state["new_code"] = sanitize_output(result, True, False)
+            is_first_iteration = False  # Ensure this branch doesn't execute again
+        else:
+            # For subsequent iterations, append with a newline
+            state["new_code"] += "\n" + sanitize_output(result, True, False)
+
+        # Check if the result meets the condition to exit the loop
+        if result.strip().endswith(code_block_delimiter):
+            # Final sanitization and adjustment if necessary before breaking the loop
+            redis_history(session_id).clear()
+            return sanitize_output(result)
+        else:
+            print_info("Extending the output with another iteration...")

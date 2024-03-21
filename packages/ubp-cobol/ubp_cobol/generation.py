@@ -1,3 +1,4 @@
+from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -6,7 +7,7 @@ from pydantic import BaseModel, Field
 from .common import MODEL_NAME, GraphState
 from .prompts import critic_generation_prompt, new_generation_prompt
 from .utils import print_heading, print_info, print_error, sanitize_output, \
-    format_copybooks_for_display, print_code_comparator, get_previous_critic_description
+    format_copybooks_for_display, print_code_comparator, get_previous_critic_description, generate_code_with_history
 
 
 def critic_generation(state: GraphState) -> GraphState:
@@ -94,14 +95,8 @@ def new_generation(state: GraphState) -> GraphState:
     print_heading("NEW GENERATION BASED ON FEEDBACK")
 
     template = new_generation_prompt(state)
-
-    prompt = ChatPromptTemplate.from_template(template)
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
-
-    chain = prompt | model | StrOutputParser()
-
-    # Invoke the OpenAI model with the formatted prompt
-    result = chain.invoke({
+    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True, max_tokens=1000)
+    variables = {
         "filename": state["filename"],
         "critic": state.get("critic", {}).get("description", ""),
         "specific_demands": state.get("specific_demands", ""),
@@ -111,14 +106,19 @@ def new_generation(state: GraphState) -> GraphState:
         "new_code": state["new_code"],
         "atlas_answer": state.get("atlas_answer", ""),
         "atlas_message_type": (state.get("atlas_message_type") or "").replace('_', ' ').capitalize()
-    })
+    }
 
     state["previous_last_gen_code"] = state.get("new_code", "")
-    state["new_code"] = sanitize_output(result)
+    state["new_code"] = generate_code_with_history(state, "new_generation", template, model, variables)
 
     # Reset atlas-related state information if it was used during this execution
     if "atlas_message_type" in state and state["atlas_message_type"]:
         state["atlas_answer"] = ""
         state["atlas_message_type"] = ""
 
+    print_info(f"Processed file: {state['filename']}")
+
     return state
+
+
+
