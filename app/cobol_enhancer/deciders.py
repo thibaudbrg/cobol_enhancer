@@ -1,5 +1,5 @@
-from ubp_cobol.common import GraphState
-from ubp_cobol.utils import print_heading, print_info, print_error, sanitize_output
+from app.cobol_enhancer.common import GraphState
+from app.cobol_enhancer.utils import print_heading, print_info, print_error
 
 
 def human_review_decider(state: GraphState):

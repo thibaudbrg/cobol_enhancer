@@ -4,10 +4,10 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 
-from ubp_cobol.common import WorkflowExit, MODEL_NAME
-from ubp_cobol.graph_export_utils import merge_deciders_for_printing, export_graph_to_image
-from ubp_cobol.utils import extract_copybooks, format_copybooks_for_display, print_heading
-from ubp_cobol.workflow import app
+from app.cobol_enhancer.common import WorkflowExit, MODEL_NAME
+from app.cobol_enhancer.graph_export_utils import merge_deciders_for_printing, export_graph_to_image
+from app.cobol_enhancer.utils import extract_copybooks, format_copybooks_for_display, print_heading
+from app.cobol_enhancer.workflow import app
 
 
 def test_workflow():
@@ -89,4 +89,5 @@ You are an AI and you talk to a human you answer everything that he asked but wi
 
     # Now retrieve and print the messages
     history_messages = redis_history.messages  # Adjusted based on actual implementation
+    redis_history.clear()
     print("History:", history_messages)

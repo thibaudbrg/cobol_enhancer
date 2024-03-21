@@ -1,10 +1,10 @@
 import pytest
 
-from ubp_cobol.common import GraphState
-from ubp_cobol.generation import critic_generation, new_generation
-from ubp_cobol.processing import process_next_file, extender
-from ubp_cobol.response_handlers import message_type_decider
-from ubp_cobol.utils import print_code_comparator, sanitize_output
+from app.cobol_enhancer.common import GraphState
+from app.cobol_enhancer.generation import critic_generation, new_generation
+from app.cobol_enhancer import process_next_file, extender
+from app.cobol_enhancer.response_handlers import message_type_decider
+from app.cobol_enhancer.utils import print_code_comparator, sanitize_output
 
 from pydantic import BaseModel, Field
 

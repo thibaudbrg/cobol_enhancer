@@ -1,7 +1,6 @@
-# prompt_templates.py
 from typing import Dict, Any
 
-from ubp_cobol.utils import get_previous_critic_description
+from app.cobol_enhancer.utils import get_previous_critic_description
 
 
 def process_file_next_prompt() -> str:
@@ -92,8 +91,7 @@ def critic_generation_prompt(state: Dict[str, Any]) -> str:
         "the version before the latest changes (previous iteration code), and the new version. "
         "Identify any errors or discrepancies introduced in the new version. Provide a detailed critique, "
         "highlighting each issue with a thorough explanation and recommended solutions. Your review will guide "
-        "developers"
-        "in refining the code.\n\n"
+        "developers in refining the code.\n\n"
     )
 
     prompt_sections = [

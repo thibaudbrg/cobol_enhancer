@@ -1,7 +1,6 @@
 from flask import Flask, render_template_string
-import plotly.graph_objects as go
 import plotly.io as pio
-from ubp_cobol.workflow import app, convert_graph_to_plotly_figure, merge_deciders_for_printing
+from app.cobol_enhancer.workflow import app, convert_graph_to_plotly_figure, merge_deciders_for_printing
 
 app_flask = Flask(__name__)
 

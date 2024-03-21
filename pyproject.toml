@@ -1,22 +1,21 @@
 [tool.poetry]
-name = "my-app"
+name = "cobol-enhancer"
 version = "0.1.0"
-description = ""
-authors = ["Thibaud Bourgeois <thibaud.bourgeois25@.com>"]
+description = "A COBOL enhancer project"
+authors = ["Thibaud Bourgeois <thibaud.bourgeois25@gmail.com>"]
 readme = "README.md"
 packages = [
     { include = "app" },
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11"  # Using the wider range from ubp-cobol might be a good idea here: ">=3.8.1,<4.0"
 uvicorn = "^0.23.2"
-langserve = {extras = ["server"], version = ">=0.0.30"}
+langserve = {extras = ["server"], version = "*"}
 pydantic = "<2"
-ubp-cobol = {path = "packages/ubp-cobol", develop = true}
-langgraph = "^0.0.26"
-langchain-openai = "^0.0.8"
-langchainhub = "^0.1.15"
+langgraph = "*"
+langchain-openai = "*"
+langchainhub = "*"
 termcolor = "^2.4.0"
 ipython = "^8.22.2"
 pygraphviz = "^1.12"
@@ -26,7 +25,11 @@ flask = "^3.0.2"
 networkx = "^3.2.1"
 pyreadline = "^2.1"
 redis = "^5.0.3"
-
+openai = "*"
+langchain-community = "*"
+langchain-core = "*"
+fastapi = "^0.104.0"
+sse-starlette = "^1.6.5"
 
 [tool.poetry.group.dev.dependencies]
 langchain-cli = ">=0.0.15"
@@ -35,3 +38,6 @@ pytest = "^8.1.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.langserve]
+export_module = "app.ubp_cobol.workflow"  # Adjusted path for the merged project structure

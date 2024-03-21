@@ -9,7 +9,7 @@ from termcolor import colored
 import re
 import os
 
-from ubp_cobol.common import GraphState
+from app.cobol_enhancer.common import GraphState
 
 
 # Utility functions for UI

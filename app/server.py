@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from langserve import add_routes
-#from ubp_cobol import chain as ubp_cobol_chain
+#from cobol_enhancer import chain as ubp_cobol_chain
 
 app = FastAPI()
 
@@ -12,7 +12,7 @@ async def redirect_root_to_docs():
 
 
 # Edit this to add the chain you want to add
-#add_routes(app, ubp_cobol_chain, path="/ubp-cobol", playground_type="chat")
+#add_routes(app, ubp_cobol_chain, path="/", playground_type="chat")
 
 if __name__ == "__main__":
     import uvicorn

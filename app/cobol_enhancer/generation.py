@@ -1,13 +1,11 @@
-from langchain_community.chat_message_histories import RedisChatMessageHistory
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from .common import MODEL_NAME, GraphState
 from .prompts import critic_generation_prompt, new_generation_prompt
-from .utils import print_heading, print_info, print_error, sanitize_output, \
-    format_copybooks_for_display, print_code_comparator, get_previous_critic_description, generate_code_with_history
+from .utils import print_heading, print_info, print_error, format_copybooks_for_display, print_code_comparator, \
+    get_previous_critic_description, generate_code_with_history
 
 
 def critic_generation(state: GraphState) -> GraphState:
