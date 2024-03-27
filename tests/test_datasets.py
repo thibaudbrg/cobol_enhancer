@@ -44,17 +44,6 @@ def test_critic_generation():
         verbose=True,
     )
 
-def test_critic_generation_2():
-    client = langsmith.Client()
-    chain_results = client.run_on_dataset(
-        dataset_name="critic_generation_dataset_2",
-        llm_or_chain_factory=model,
-        evaluation=eval_config,
-        project_name=f"critic_generation-{date}",
-        concurrency_level=5,
-        verbose=True,
-    )
-
 
 def test_new_generation():
     client = langsmith.Client()

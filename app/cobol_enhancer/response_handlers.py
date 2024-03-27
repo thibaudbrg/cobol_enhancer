@@ -100,8 +100,8 @@ def handle_logs(state: GraphState) -> GraphState:
     state["new_code"] = ""
     state["human_decision"] = ""
     state["specific_demands"] = ""
-    state["metadata"] = ""
     state["filename"] = ""
+    state["original_critic"] = {}
     state["critic"] = {}
     state["copybooks"] = {}
     state["atlas_answer"] = ""

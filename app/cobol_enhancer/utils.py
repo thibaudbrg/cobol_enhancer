@@ -155,8 +155,8 @@ def generate_code_with_history(state, function_name, template, model, variables)
         raise ValueError("The REDIS_URL environment variable is not set.")
     session_id = f"{function_name}_{state['filename']}"
 
-    def redis_history(session_id):
-        return RedisChatMessageHistory(session_id, url=redis_url)
+    def redis_history(id):
+        return RedisChatMessageHistory(id, url=redis_url)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", template),
@@ -174,6 +174,7 @@ def generate_code_with_history(state, function_name, template, model, variables)
 
     code_block_delimiter = "```"
     is_first_iteration = True
+    final_output_accumulated = ""
     while True:
         # Set "question" based on whether it's the first iteration
         question_value = "" if is_first_iteration else "continue"
@@ -183,18 +184,19 @@ def generate_code_with_history(state, function_name, template, model, variables)
             **variables  # Unpack additional_variables into the outer dictionary
         }, config=config)
 
-        # Append sanitized output to state["new_code"], with additional logic for first iteration
+        current_output = sanitize_output(result, True, False)
+
+        # Always append to the final_output_accumulated to accumulate all iterations
         if is_first_iteration:
-            state["new_code"] = sanitize_output(result, True, False)
-            is_first_iteration = False  # Ensure this branch doesn't execute again
+            final_output_accumulated = current_output
+            is_first_iteration = False
         else:
-            # For subsequent iterations, append with a newline
-            state["new_code"] += "\n" + sanitize_output(result, True, False)
+            final_output_accumulated += current_output
 
         # Check if the result meets the condition to exit the loop
-        if result.strip().endswith(code_block_delimiter):
+        if final_output_accumulated.strip().endswith(code_block_delimiter) and "Continuation" not in result:
             # Final sanitization and adjustment if necessary before breaking the loop
             redis_history(session_id).clear()
-            return sanitize_output(result)
+            return sanitize_output(final_output_accumulated)
         else:
             print_info("Extending the output with another iteration...")

@@ -6,15 +6,10 @@ class WorkflowExit(Exception):
     pass
 
 
-class FileMetadata(TypedDict):
-    dependencies: List[str]
-
-
 class GraphState(TypedDict):
     files_to_process: List[str]
-    file_metadata: Dict[str, FileMetadata]
-    metadata: FileMetadata
     filename: str
+    original_critic: Dict[str, str]
     critic: Dict[str, str]
     old_code: str
     previous_last_gen_code: str

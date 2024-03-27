@@ -93,12 +93,11 @@ def new_generation(state: GraphState) -> GraphState:
     print_heading("NEW GENERATION BASED ON FEEDBACK")
 
     template = new_generation_prompt(state)
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True, max_tokens=1000)
+    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
     variables = {
         "filename": state["filename"],
         "critic": state.get("critic", {}).get("description", ""),
         "specific_demands": state.get("specific_demands", ""),
-        "metadata": state["metadata"],
         "copybooks": format_copybooks_for_display(state["copybooks"]),
         "old_code": state["old_code"],
         "new_code": state["new_code"],

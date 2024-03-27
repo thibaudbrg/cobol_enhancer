@@ -20,14 +20,18 @@ def process_file_next_prompt() -> str:
 
     Please return only the improved COBOL code, with no additional comments or explanations. It's crucial to wrap the code into the markdown notation ```cobol [the_code] ```
 
-    Here are the useful infos (metadatas) of the provided file:
-    {metadata}
-
-
 
     And here is the COBOL file named {filename}:
 
     {old_code}
+    
+    
+    
+    Following the critics below about the COBOL code, please provide a new version of the code that addresses the 
+    issues and enhances the code quality. Ensure that the new version is optimized, error-free, and maintains the 
+    original functionality. Your output should be the corrected code only. Critics:
+    
+    {original_critic}
     """
 
     return prompt_template
@@ -80,6 +84,21 @@ def extender_prompt(state: Dict[str, Any]) -> str:
         )
 
     return template + template_extension
+
+
+def analyze_file_prompt() -> str:
+    prompt = (
+        "You are an expert in code analysis with a focus on COBOL. Examine the original provided code: {filename}. "
+        "Identify any errors, discrepancies or possible enhancement with good usages. Provide a detailed critique, "
+        "highlighting each issue with a thorough explanation and recommended solutions. Your review will guide "
+        "developers in refining the code. This version is under scrutiny for accuracy and adherence to best "
+        "practices. \n\n"
+
+        "===========================================\n"
+        "Original COBOL Code:\n{old_code}\n\n"
+    )
+
+    return prompt
 
 
 def critic_generation_prompt(state: Dict[str, Any]) -> str:
@@ -147,7 +166,7 @@ def new_generation_prompt(state: Dict[str, Any]) -> str:
         "A new version of {filename} has been generated to improve upon the old code. "
         "Your objective is to correct these mistakes, ensuring the updated code remains "
         "true to its original functionality and improves upon it where possible.\n\n"
-        "Based on the critics and utilizing the metadata, refine the generated code to solve the identified issues. "
+        "Based on the critics, refine the generated code to solve the identified issues. "
         "Ensure the final version is optimized, error-free, and faithful to the original's functionality. "
         "Your output should be the corrected code only.\n\n"
         "It's crucial that you don't remove existing comments. Even more important, it is crucial that you add more comments for a better understanding.\n\n"
