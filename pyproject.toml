@@ -9,7 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"  # Using the wider range from ubp-cobol might be a good idea here: ">=3.8.1,<4.0"
+python = "^3.11"
 uvicorn = "^0.23.2"
 langserve = {extras = ["server"], version = "*"}
 pydantic = "<2"
