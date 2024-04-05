@@ -55,13 +55,13 @@ def export_graph_to_image(graph: Graph, output_directory: str, filename: str = "
             dot.node(node_id, label, fillcolor='#ffcccc')  # Light red for other nodes
 
     # Define edges with specific conditions for green color
-    green_edges = ['human_check', 'send_file', 'sender', 'next_file', 'no_more_file', 'logs']
-
+    green_edges_label = ['human_check', 'send_file', 'sender', 'next_file', 'no_more_file', 'logs']
+    green_edges_from_source = ['__start__', 'process_directory', 'analyze_next_file', 'generate', 'sender']
     # Add edges with customized colors
     for edge in graph.edges:
         label = edge.data if edge.data else ""
         # Determine color based on specific conditions
-        if label in green_edges or edge.source in green_edges:
+        if label in green_edges_label or edge.source in green_edges_from_source:
             color = '#33cc33'  # Dark green for specified steps
         else:
             color = '#cc3333'  # Dark red for other steps

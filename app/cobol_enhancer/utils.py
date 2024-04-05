@@ -108,6 +108,7 @@ def extract_copybooks(cobol_file_content: str) -> dict:
     Returns:
         dict: A dictionary with copybook names as keys and their contents as values.
     """
+    print("\n")
     copy_regex = re.compile(r'\bCOPY\s+(\S+)\.?')
     copybooks = {}
     lines = cobol_file_content.splitlines()
@@ -122,6 +123,7 @@ def extract_copybooks(cobol_file_content: str) -> dict:
                     copybooks[copybook_name] = copybook_file.read()
             except FileNotFoundError:
                 print(f"Copybook {copybook_name} not found at {copybook_path}")
+    print("\n")
     return copybooks
 
 
@@ -157,6 +159,9 @@ def generate_code_with_history(state, function_name, template, model, variables)
 
     def redis_history(id):
         return RedisChatMessageHistory(id, url=redis_url)
+
+    # Clear the history before starting to avoid any potential issues
+    redis_history(session_id).clear()
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", template),

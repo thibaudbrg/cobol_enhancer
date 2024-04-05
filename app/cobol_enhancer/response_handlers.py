@@ -1,10 +1,12 @@
 import os
 
 from langchain import hub
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from .common import GraphState, MODEL_NAME
+from .prompts import message_type_decider_prompt
 from .utils import print_heading, print_info, print_error
 
 
@@ -38,7 +40,7 @@ def message_type_decider(state: GraphState) -> str:
     # Prepare the prompt and the model for calling OpenAI
     # prompt = "Analyze the following message and determine if
     # it's a compilation error, execution error, or logs:\n\n" + state["atlas_answer"]
-    prompt = hub.pull("thibaudbrg/cobol-determine-message")
+    template = message_type_decider_prompt()
     model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
 
     # Define the Pydantic model for the message type result
@@ -46,7 +48,7 @@ def message_type_decider(state: GraphState) -> str:
         message_type: str = Field(
             description="The type of the message: 'compilation_error', 'execution_error', or 'logs'.")
 
-    chain = prompt | model.with_structured_output(MessageTypeResult)
+    chain = ChatPromptTemplate.from_template(template) | model.with_structured_output(MessageTypeResult)
 
     try:
         message_pydantic = chain.invoke({"atlas_answer": state["atlas_answer"]})
