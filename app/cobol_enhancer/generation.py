@@ -3,12 +3,12 @@
 import collections.abc
 import os
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import AnthropicLLM
+from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+from langchain_google_genai import GoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 from pydantic import BaseModel, Field
 
-from .common import MODEL_NAME, GraphState, WorkflowExit
+from .common import GraphState, WorkflowExit, GEMINI, GEMINI_SAFETY_SETTINGS
 from .prompts import critic_generation_prompt, analyze_file_prompt, generation_prompt
 from .utils import print_heading, print_info, print_error, format_copybooks_for_display, print_code_comparator, \
     get_previous_critic_description, generate_code_with_history, filename_tab_completion, extract_copybooks
@@ -95,15 +95,20 @@ def analyze_next_file(state: GraphState) -> GraphState:
     state["old_code"] = old_code
     state["copybooks"] = extract_copybooks(old_code)
 
-    template = analyze_file_prompt()
-    # model = AnthropicLLM(temperature=0, model="claude-2.1", streaming=True)
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
+    model = GoogleGenerativeAI(model=GEMINI, safety_settings=GEMINI_SAFETY_SETTINGS)
+
 
     class CodeReviewResult(BaseModel):
         description: str = Field(description="The written critique of the code comparison.")
         grade: str = Field(description="Binary score 'good' or 'bad'.")
 
-    chain = ChatPromptTemplate.from_template(template) | model.with_structured_output(CodeReviewResult)
+    output_parser = PydanticOutputParser(pydantic_object=CodeReviewResult)
+    prompt = PromptTemplate(
+        template=analyze_file_prompt() + "\n{format_instructions}\n",
+        input_variables=["filename", "old_code"],
+        partial_variables={"format_instructions": output_parser.get_format_instructions()},
+    )
+    chain = prompt | model | output_parser
 
     critic_response = chain.invoke({
         "filename": state["filename"],
@@ -122,7 +127,8 @@ def generate(state: GraphState) -> GraphState:
     print_heading("GENERATION")
 
     template = generation_prompt(state)
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
+    model = GoogleGenerativeAI(model=GEMINI, safety_settings=GEMINI_SAFETY_SETTINGS)
+
     variables = {
         "filename": state["filename"],
         "copybooks": format_copybooks_for_display(state["copybooks"]),
@@ -143,7 +149,17 @@ def generate(state: GraphState) -> GraphState:
         state["atlas_answer"] = ""
         state["atlas_message_type"] = ""
 
-    state["new_code"] = generate_code_with_history(state, "process_next_file", template, model, variables)
+    # state["new_code"] = generate_code_with_history(state, "process_next_file", template, model, variables)
+    chain = ChatPromptTemplate.from_template(template) | model | StrOutputParser()
+
+    # Use stream instead of invoke
+    new_code_accumulated = ""
+    for chunk in chain.stream({**variables}):
+        print(chunk, end="", flush=True)
+        new_code_accumulated += chunk
+
+    # Save the accumulated output to the state
+    state["new_code"] = new_code_accumulated
 
     # After first generation, clear the original_critic
     state["original_critic"] = {}
@@ -156,19 +172,23 @@ def generate(state: GraphState) -> GraphState:
 def critic_generation(state: GraphState) -> GraphState:
     print_heading("CRITIC GENERATION")
 
-    # Concatenate the base prompt with the detailed sections
-    template = critic_generation_prompt(state)
-
     # Set up the model and the structured output parser
-    model = ChatOpenAI(temperature=0, model=MODEL_NAME, streaming=True)
+    model = GoogleGenerativeAI(model=GEMINI, safety_settings=GEMINI_SAFETY_SETTINGS)
 
     # Define the Pydantic model for structured output
     class CodeReviewResult(BaseModel):
         description: str = Field(description="The written critique of the code comparison.")
         grade: str = Field(description="Binary score 'good' or 'bad'.")
 
+    output_parser = PydanticOutputParser(pydantic_object=CodeReviewResult)
+    prompt = PromptTemplate(
+        template=critic_generation_prompt(state) + "\n{format_instructions}\n",
+        input_variables=["old_code", "previous_iteration_code", "specific_demands", "previous_critic_description", "atlas_answer", "new_code", "atlas_message_type"],
+        partial_variables={"format_instructions": output_parser.get_format_instructions()},
+    )
+
     # Use the full prompt to call the model with structured output
-    chain = ChatPromptTemplate.from_template(template) | model.with_structured_output(CodeReviewResult)
+    chain = prompt | model | output_parser
 
     # Invoke the chain with the filled-out prompt
     try:

@@ -30,6 +30,7 @@ langchain-core = "*"
 fastapi = "^0.104.0"
 sse-starlette = "^1.6.5"
 langchain-anthropic = "^0.1.6"
+langchain-google-genai = "^1.0.2"
 
 [tool.poetry.group.dev.dependencies]
 langchain-cli = ">=0.0.15"
